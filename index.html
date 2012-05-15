@@ -36,9 +36,35 @@
                     <h3 class="fragment">in 15 minutes</h3>
 				</section>
                 <section>
-                        <h2>Why Redis?<h2>
-                        <p>
-                        </p>
+                        <h2>Why Redis?</h2>
+                        <ul>
+                            <li class="fragment">
+                                "[Memcache|Global variables] on steroids"
+                            </li>
+
+                            <li class="fragment">
+                                Advanced key-value store.
+                                <br/>
+                                Values can be interesting data structures like
+                                <br/>
+                                lists, sets, hashes, sorted sets
+                            </li>
+
+                            <li class="fragment">
+                                Fast atomic operations on values:
+                                <br/>
+                                appending, increment, set intersection and union,
+                                <br/>finding members with highest rank, etc.
+                            </li>
+
+                            <li class="fragment">
+                                Super fast, because it lives entirely in memory
+                            </li>
+
+                            <li class="fragment">
+                                Fancy features: pub/sub, transactions, check-and-set
+                            </li>
+                        </ul>
                 </section>
                 <section>
                         <h2>Jobs</h2>
@@ -48,11 +74,11 @@
                         <pre class="fragment large"><code contenteditable>
 class SendSms():
     """A resq job that sends a message to a phone via SMS"""
-    queue = Q_SMS
+    queue = 'sms'
     @staticmethod
     def perform(phone, message):
         logging.info("[SendSms.perform] Sending message to %s" % phone)
-        send_sms_to_phone_number(phone, message)
+        twilio.send(phone, message)
                         </code></pre>
                 </section>
                 <section>
@@ -157,6 +183,7 @@ SADD queues:sms {"args": ["...", "..."], "class": "..."}
                 </section>
                 <section>
                         <h2>Web interface!</h2>
+                        <h2>+ Demo</h2>
                 </section>
                 <section>
                         <h2>Links!</h2>
