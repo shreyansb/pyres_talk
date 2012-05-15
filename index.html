@@ -1,0 +1,237 @@
+<!doctype html>  
+<html lang="en">
+	
+	<head>
+		<meta charset="utf-8">
+		
+		<title>A task queue in Redis</title>
+
+		<meta name="description" content="">
+		<meta name="author" content="Shreyans Bhansali">
+
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+		
+		<link href='http://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+		
+		<link rel="stylesheet" href="css/reset.css">
+		<link rel="stylesheet" href="css/main.css">
+		<link rel="stylesheet" href="css/print.css" type="text/css" media="print">
+
+		<link rel="stylesheet" href="lib/zenburn.css">
+	</head>
+	
+	<body>
+		
+		<div id="reveal">
+
+			<!-- Used to fade in a background when a specific slide state is reached -->
+			<div class="state-background"></div>
+			
+			<!-- Any section element inside of this container is displayed as a slide -->
+			<div class="slides">
+				<section>
+					<h1>Pyres / Resque</h1>
+                    <h3 class="fragment">or how to build a task queue using Redis</h3>
+                    <h3 class="fragment">in 15 minutes</h3>
+				</section>
+                <section>
+                        <h2>Why Redis?<h2>
+                        <p>
+                        </p>
+                </section>
+                <section>
+                        <h2>Jobs</h2>
+                        <p>
+                        A Job is a python class that implements <code>perform()</code> and has an attribute <code>queue</code>.
+                        </p>
+                        <pre class="fragment large"><code contenteditable>
+class SendSms():
+    """A resq job that sends a message to a phone via SMS"""
+    queue = Q_SMS
+    @staticmethod
+    def perform(phone, message):
+        logging.info("[SendSms.perform] Sending message to %s" % phone)
+        send_sms_to_phone_number(phone, message)
+                        </code></pre>
+                </section>
+                <section>
+
+                        <h2>Workers</h2>
+                        <p>
+                            A Worker pulls jobs from queues and runs them
+                        </p>
+                </section>
+                <section>
+                        <h2>Enqueueing a job</h2>
+                        <p>
+                            Create a json string representing the task, with two keys:
+                        </p>
+
+                        <div class="fragment">
+                            <p>
+                                <code>class</code>
+                                , the Job class we want to run
+                                <br/>
+                                <code>args</code>
+                                , a list of args, 
+                                passed into 
+                                <code>perform</code> 
+                                as <code>*args</code>
+                            </p>
+                        </div>
+
+                        <pre class="fragment large"><code contenteditable>
+{"args": ["6469152002", "hello"], "class": "communications.sms.SendSms"}
+                        </code></pre>
+                </section>
+                <section>
+                        <h2>Queue it up</h2>
+
+                        <p>
+                            Ensure the queue is in the set of queues<br/>
+                            Add the job to the set of jobs
+                        </p>
+
+                        <pre class="fragment large"><code contenteditable>
+SADD queues sms
+SADD queues:sms {"args": ["...", "..."], "class": "..."}
+                        </code></pre>
+                </section>
+                <section>
+                        <h2>Worker waits for work...</h2>
+                        <pre class=" large"><code contenteditable>
+BLPOP queue:sms queue:comments
+                        </code></pre>
+                        <p class="fragment">
+                            The worker does a `blocking pop`,<br/>
+                            blocking until Redis gives it something from a set.</br>
+                            Redis manages multiple clients blocking for the same set.
+                        </p>
+                </section>
+                <section>
+                        <h2>...and when it gets work</h2>
+                        <pre class=" large"><code contenteditable>
+payload_class.perform(*args)
+                        </code></pre>
+                        <p class="fragment">
+
+                        </p>
+                </section>
+				<section>
+                    <h2>That's pretty much it<h2>
+				</section>
+                <section>
+                        <h2>Queue it up for later...</h2>
+
+                        <p>
+                            Add the job to the delayed queue
+                        </p>
+
+                        <pre class=" large"><code contenteditable>
+ZADD delayed_queue_schedule 1336960425 1336960425
+SADD delayed:1336960425 {"queue": "sms", "args": [...], "class": "..."}
+                        </code></pre>
+
+                </section>
+                <section>
+                        <h2>...and at the right second</h2>
+
+                        <p>
+                            Remove the task from the delayed queue
+                        </p>
+
+                        <pre class=" large"><code contenteditable>
+LPOP delayed:1336960425
+DELETE delayed:1336960425
+ZREM delayed_queue_schedule 1336960425
+                        </code></pre>
+
+                        <div class="fragment"
+                            <p>
+                                And add it to its intended queue
+                            </p>
+
+                        <pre class=" large"><code contenteditable>
+SADD queues sms
+SADD queues:sms {"args": ["...", "..."], "class": "..."}
+                        </code></pre>
+                        </div>
+                </section>
+                <section>
+					<ul>
+						<li><a href="https://github.com/defunkt/resque">Resque</a></li>
+						<li><a href="http://github.com/binarydud/pyres">Pyres</a></li>
+						<li><a href=""></a></li>
+					</ul>
+                    
+                </section>
+				
+			</div>
+
+			<!-- The navigational controls UI -->
+			<aside class="controls">
+				<a class="left" href="#">&#x25C4;</a>
+				<a class="right" href="#">&#x25BA;</a>
+				<a class="up" href="#">&#x25B2;</a>
+				<a class="down" href="#">&#x25BC;</a>
+			</aside>
+
+			<!-- Displays presentation progress, max value changes via JS to reflect # of slides -->
+			<div class="progress"><span></span></div>
+			
+		</div>
+		
+		<script src="js/reveal.js"></script>
+
+		<!-- Optional libraries for code syntax highlighting and classList support in IE9 -->
+		<script src="lib/highlight.js"></script>
+		
+		<script>
+			// Parse the query string into a key/value object
+			var query = {};
+			location.search.replace( /[A-Z0-9]+?=(\w*)/gi, function(a) {
+				query[ a.split( '=' ).shift() ] = a.split( '=' ).pop();
+			} );
+
+			// Fires when a slide with data-state=customevent is activated
+			Reveal.addEventListener( 'customevent', function() {
+				alert( '"customevent" has fired' );
+			} );
+
+			// Fires each time a new slide is activated
+			Reveal.addEventListener( 'slidechanged', function( event ) {
+				// event.indexh & event.indexv
+			} );
+
+			Reveal.initialize({
+				// Display controls in the bottom right corner
+				controls: true,
+
+				// Display a presentation progress bar
+				progress: true,
+
+				// If true; each slide will be pushed to the browser history
+				history: true,
+
+				// Loops the presentation, defaults to false
+				loop: false,
+
+				// Flags if mouse wheel navigation should be enabled
+				mouseWheel: true,
+
+				// Apply a 3D roll to links on hover
+				rollingLinks: true,
+
+				// UI style
+				theme: query.theme || 'default', // default/neon
+
+				// Transition style
+				transition: query.transition || 'default' // default/cube/page/concave/linear(2d)
+			});
+
+			hljs.initHighlightingOnLoad();
+		</script>
+
+	</body>
+</html>
